@@ -17,6 +17,7 @@ interface Props {
   };
   onChange: (s: Partial<Props["settings"]>) => void;
   jobId: string | null;
+  onReady?: () => void;
 }
 
 const SliderRow = ({ label, value, min, max, step, onChange, format }: any) => (
@@ -43,7 +44,7 @@ function formatTime(s: number) {
   return `${m}:${String(sec).padStart(2, "0")}`;
 }
 
-export default function ClipEditor({ duration, settings, onChange, jobId }: Props) {
+export default function ClipEditor({ duration, settings, onChange, jobId, onReady }: Props) {
   const [downloadStatus, setDownloadStatus] = useState<"running" | "done" | "error" | null>(null);
   const maxEnd = Math.min(duration, settings.startTime + 60);
 
@@ -53,9 +54,16 @@ export default function ClipEditor({ duration, settings, onChange, jobId }: Prop
       try {
         const res = await api.get(`/api/videos/status/${jobId}`);
         const s = res.data.status;
-        if (s === "done") { setDownloadStatus("done"); clearInterval(interval); }
-        else if (s === "error") { setDownloadStatus("error"); clearInterval(interval); }
-        else { setDownloadStatus("running"); }
+        if (s === "done") {
+          setDownloadStatus("done");
+          onReady?.();
+          clearInterval(interval);
+        } else if (s === "error") {
+          setDownloadStatus("error");
+          clearInterval(interval);
+        } else {
+          setDownloadStatus("running");
+        }
       } catch {}
     }, 2000);
     return () => clearInterval(interval);

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "motion/react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import UrlInput from "@/components/convert/UrlInput";
 import VideoPreview from "@/components/convert/VideoPreview";
@@ -18,6 +18,7 @@ export default function ConvertPage() {
   const [videoId, setVideoId] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [processedJobId, setProcessedJobId] = useState<string | null>(null);
+  const [downloadReady, setDownloadReady] = useState(false);
   const [editSettings, setEditSettings] = useState({
     startTime: 0,
     endTime: 60,
@@ -135,6 +136,7 @@ export default function ConvertPage() {
               settings={editSettings}
               onChange={s => setEditSettings(prev => ({ ...prev, ...s }))}
               jobId={jobId}
+              onReady={() => setDownloadReady(true)}
             />
             <MusicLibrary
               selected={editSettings.musicId}
@@ -148,13 +150,14 @@ export default function ConvertPage() {
             />
             <div className="flex justify-end">
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={downloadReady ? { scale: 1.02 } : {}}
+                whileTap={downloadReady ? { scale: 0.98 } : {}}
                 onClick={handleProcess}
-                className="px-6 py-3 rounded-xl font-semibold text-white"
+                disabled={!downloadReady}
+                className="px-6 py-3 rounded-xl font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ background: "linear-gradient(135deg, #7c3aed, #db2777)" }}
               >
-                Process Video →
+                {downloadReady ? "Process Video →" : "Waiting for download..."}
               </motion.button>
             </div>
           </motion.div>

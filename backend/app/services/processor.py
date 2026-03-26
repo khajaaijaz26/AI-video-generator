@@ -92,8 +92,10 @@ class VideoProcessor:
             crop_y = int((height - crop_h) * 0.5)
 
         duration = req.end_time - req.start_time
+        # Output duration accounts for speed adjustment
+        output_duration = duration / req.speed
 
-        # Build filter graph
+        # Build base filter graph
         vf = (
             f"crop={crop_w}:{crop_h}:{crop_x}:{crop_y},"
             f"scale=1080:1920:force_original_aspect_ratio=decrease,"
@@ -102,44 +104,61 @@ class VideoProcessor:
             f"setpts={1/req.speed}*PTS"
         )
 
+        # Append caption drawtext filters
+        for caption in (req.captions or []):
+            text = caption.get("text", "")
+            # Escape special characters for FFmpeg drawtext
+            text = text.replace("\\", "\\\\").replace("'", "'\\''").replace(":", "\\:")
+            start = float(caption.get("start", 0))
+            end = float(caption.get("end", start + 3))
+            vf += (
+                f",drawtext=text='{text}':fontsize=48:fontcolor=white"
+                f":borderw=3:bordercolor=black:x=(w-text_w)/2:y=h-160"
+                f":enable='between(t\\,{start}\\,{end})'"
+            )
+
         music_track = music_service.get_track(req.music_id) if req.music_id else None
 
         if music_track and os.path.exists(music_track.file_path):
             input_video = ffmpeg.input(source_path, ss=req.start_time, t=duration)
             input_music = ffmpeg.input(music_track.file_path, stream_loop=-1)
 
-            video_stream = input_video.video.filter_multi_output(vf)
-            audio_stream = input_music.audio.filter("volume", 0.8).filter("atrim", duration=duration)
+            audio_stream = input_music.audio.filter("volume", 0.8)
+            if req.speed != 1.0:
+                audio_stream = audio_stream.filter("atempo", req.speed)
+            audio_stream = audio_stream.filter("atrim", duration=output_duration)
 
             (
                 ffmpeg
                 .output(
-                    video_stream,
+                    input_video.video,
                     audio_stream,
                     output_path,
+                    vf=vf,
                     vcodec="libx264",
                     acodec="aac",
                     preset="fast",
                     crf=23,
                     audio_bitrate="128k",
-                    t=duration,
+                    t=output_duration,
                 )
                 .overwrite_output()
                 .run(quiet=True)
             )
         else:
-            # No audio replacement — keep original or mute
+            # No audio replacement — mute output
             input_video = ffmpeg.input(source_path, ss=req.start_time, t=duration)
             (
                 ffmpeg
                 .output(
-                    input_video.video.filter(vf),
+                    input_video.video,
                     output_path,
+                    vf=vf,
                     vcodec="libx264",
                     preset="fast",
                     crf=23,
-                    an=None,  # no audio
-                    t=duration,
+                    an=None,
+                    t=output_duration,
                 )
                 .overwrite_output()
                 .run(quiet=True)

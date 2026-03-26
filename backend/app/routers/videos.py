@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import uuid
+import os
 
 from app.database import get_db
 from app.models import Video, Job
@@ -102,6 +103,12 @@ async def delete_video(video_id: str, db: AsyncSession = Depends(get_db)):
     video = result.scalar_one_or_none()
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
+    # Delete processed file from disk before removing DB record
+    if video.output_path and os.path.exists(video.output_path):
+        try:
+            os.remove(video.output_path)
+        except OSError:
+            pass
     await db.delete(video)
     await db.commit()
     return {"message": "Video deleted"}
