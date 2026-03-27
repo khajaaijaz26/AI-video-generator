@@ -1,19 +1,19 @@
 FROM python:3.11-slim
 
-# Install ffmpeg and system dependencies
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     curl \
     gcc \
-    python3-dev \
     libffi-dev \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY requirements.txt .
-# --ignore-installed ensures pip versions take precedence over any apt-installed packages
-RUN pip install --no-cache-dir --ignore-installed -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --ignore-installed -r requirements.txt
 
 COPY . .
 
