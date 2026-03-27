@@ -157,7 +157,7 @@ class VideoProcessor:
                     vcodec="libx264",
                     preset="fast",
                     crf=23,
-                    an=None,
+                    an=True,
                     t=output_duration,
                 )
                 .overwrite_output()

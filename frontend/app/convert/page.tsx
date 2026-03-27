@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import UrlInput from "@/components/convert/UrlInput";
 import VideoPreview from "@/components/convert/VideoPreview";
@@ -12,7 +13,10 @@ import toast from "react-hot-toast";
 
 type Step = "input" | "preview" | "edit" | "export";
 
-export default function ConvertPage() {
+function ConvertInner() {
+  const searchParams = useSearchParams();
+  const initialUrl = searchParams.get("url") || "";
+
   const [step, setStep] = useState<Step>("input");
   const [metadata, setMetadata] = useState<any>(null);
   const [videoId, setVideoId] = useState<string | null>(null);
@@ -117,7 +121,7 @@ export default function ConvertPage() {
       <AnimatePresence mode="wait">
         {step === "input" && (
           <motion.div key="input" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-            <UrlInput onAnalyze={handleAnalyze} />
+            <UrlInput onAnalyze={handleAnalyze} initialUrl={initialUrl} />
           </motion.div>
         )}
         {step === "preview" && metadata && (
@@ -169,5 +173,13 @@ export default function ConvertPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function ConvertPage() {
+  return (
+    <Suspense fallback={<div className="max-w-5xl mx-auto p-8 text-muted-foreground">Loading...</div>}>
+      <ConvertInner />
+    </Suspense>
   );
 }

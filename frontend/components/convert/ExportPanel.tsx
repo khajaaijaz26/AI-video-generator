@@ -21,6 +21,7 @@ export default function ExportPanel({ videoId, jobId, metadata }: Props) {
   const [igUploadId, setIgUploadId] = useState<string | null>(null);
   const [ytStatus, setYtStatus] = useState<string | null>(null);
   const [igStatus, setIgStatus] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
   useEffect(() => {
@@ -31,11 +32,20 @@ export default function ExportPanel({ videoId, jobId, metadata }: Props) {
         const { status, progress: p } = res.data;
         setProcessStatus(status);
         setProgress(p || 0);
-        if (status === "done" || status === "error") clearInterval(interval);
+        if (status === "done") {
+          clearInterval(interval);
+          // Fetch video to get the output filename for download
+          try {
+            const vRes = await api.get(`/api/videos/${videoId}`);
+            const filename = vRes.data.output_path?.split("/").pop();
+            if (filename) setDownloadUrl(`${backendUrl}/uploads/${filename}`);
+          } catch {}
+        }
+        if (status === "error") clearInterval(interval);
       } catch {}
     }, 2000);
     return () => clearInterval(interval);
-  }, [jobId]);
+  }, [jobId, videoId, backendUrl]);
 
   useEffect(() => {
     if (!ytUploadId) return;
@@ -131,9 +141,10 @@ export default function ExportPanel({ videoId, jobId, metadata }: Props) {
           </div>
         </div>
 
-        {processStatus === "done" && (
+        {processStatus === "done" && downloadUrl && (
           <a
-            href={`${backendUrl}/api/videos/${videoId}`}
+            href={downloadUrl}
+            download
             className="flex items-center gap-2 text-sm text-primary hover:underline"
           >
             <Download className="w-4 h-4" /> Download processed video

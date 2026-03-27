@@ -5,6 +5,7 @@ import { Link2, Loader2, Youtube, ArrowRight } from "lucide-react";
 
 interface Props {
   onAnalyze: (url: string) => Promise<void>;
+  initialUrl?: string;
 }
 
 const EXAMPLE_URLS = [
@@ -13,8 +14,8 @@ const EXAMPLE_URLS = [
   "https://www.youtube.com/shorts/example",
 ];
 
-export default function UrlInput({ onAnalyze }: Props) {
-  const [url, setUrl] = useState("");
+export default function UrlInput({ onAnalyze, initialUrl }: Props) {
+  const [url, setUrl] = useState(initialUrl || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
